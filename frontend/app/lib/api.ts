@@ -1,4 +1,7 @@
+// 백엔드 API 타입 정의와 fetch 클라이언트를 담당하는 파일
 export type Category = "residency" | "labor";
+
+export type GuideReference = { title: string; url: string; publisher: string };
 
 export type Guide = {
   id: string;
@@ -12,6 +15,9 @@ export type Guide = {
   source_name: Record<string, string>;
   source_url: string;
   verified_at: string;
+  target: Record<string, string>;
+  common_mistakes: Record<string, string[]>;
+  related_documents: GuideReference[];
 };
 
 export type Agency = {
@@ -57,7 +63,24 @@ export type ConsultationResponse = {
   follow_up_questions: string[];
 };
 
-export type RAGSource = { document_id: string; chunk_id: string; title: string; publisher: string; url: string; verified_at: string; relevance: number; document_version: string; published_at: string | null; collected_at: string | null; effective_from: string | null; last_checked_at: string | null; freshness_type: "versioned" | "periodically_checked" | "live_verification_required"; freshness_status: string; document_type: string; authority_score: number; trust_level: "high" | "medium" | "low"; trust_reasons: string[] };
+export type RAGSource = { document_id: string; chunk_id: string; title: string; publisher: string; url: string; url_specific: boolean; display_title: string | null; display_publisher: string | null; source_summary: string | null; verified_at: string; relevance: number; document_version: string; published_at: string | null; collected_at: string | null; effective_from: string | null; last_checked_at: string | null; freshness_type: "versioned" | "periodically_checked" | "live_verification_required"; freshness_status: string; document_type: string; authority_score: number; trust_level: "high" | "medium" | "low"; trust_reasons: string[] };
+
+export type RiskItem = {
+  level: "SAFE" | "CHECK" | "WARNING";
+  clause: string;
+  reason: string;
+  recommendation: string;
+  checks: string[];
+  sources: RAGSource[];
+  title: string;
+  official_standard: string;
+  problem: string;
+  impact: string;
+  recommended_revision: string;
+  detected_value: string | null;
+  official_value: string | null;
+  difference: string | null;
+};
 
 export type DocumentExplanation = {
   language: "ko" | "en" | "vi";
@@ -68,7 +91,15 @@ export type DocumentExplanation = {
   cautions: string[];
   related_guides: Guide[];
   privacy_redacted: boolean;
+  document_type: string;
+  key_terms: Record<string, string>;
+  risk_items: RiskItem[];
+  ocr_used: boolean;
+  ocr_confidence: number | null;
+  original_text: string;
 };
+
+export type RegionInfo = { region: string | null; name: Record<string, string> | null };
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
@@ -86,6 +117,9 @@ export const getGuides = (category?: Category) =>
   apiFetch<Guide[]>(`/api/guides${category ? `?category=${category}` : ""}`);
 
 export const getGuide = (id: string) => apiFetch<Guide>(`/api/guides/${id}`);
+
+export const resolveRegion = (latitude: number, longitude: number) =>
+  apiFetch<RegionInfo>(`/api/regions/resolve?latitude=${latitude}&longitude=${longitude}`);
 
 export const getAgencies = (params: AgencySearchParams = {}) => {
   const query = new URLSearchParams();
